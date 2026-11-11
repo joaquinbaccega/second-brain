@@ -47,7 +47,21 @@ other-app|/home/me/notes/other-app
 | `/brain-init [path]` | Creates a vault from the templates and registers it in `brains.conf`. |
 | `/brain-load [vault]` | Reads the hub and its decisions and summarizes the current state. |
 | `/brain-save [what]` | Saves decisions, learnings and gotchas as notes and updates the hub. |
-| `/tareas [...]` | Shared task board: `agregar`, `preparar`, dispatch (no argument or `N`), `tomar`, `estado`, `mergear`. |
+| `/tareas [...]` | Shared task board: `agregar`, `preparar`, dispatch (no argument or `N`), `tomar`, `estado`, `mergear`, `modelos`. |
+
+## Models for `/tareas` subagents
+
+`/brain-init` asks which models the subagents should use and saves the answer in `<vault>/Modelos.md`. Change it any time with `/tareas modelos <perfil>` or by editing the note.
+
+| Perfil | Behavior |
+|---|---|
+| `equilibrado` (default) | Sonnet for most work, Opus for sensitive tasks (money, permissions, migrations, concurrency, architecture) and their reviews, Fable only when Opus is not enough. |
+| `ahorro` | Sonnet everywhere; Opus only to review sensitive tasks; never Fable. |
+| `calidad` | Opus by default, Fable for sensitive tasks, Sonnet only for code exploration. |
+| `sonnet` / `opus` / `fable` | One model for everything. |
+| `propio` | Your own rules, written in plain words in the note. |
+
+In the mixed perfiles, a subagent that struggles is relaunched one tier up, and the change is logged in the task. A task taken with `tomar` runs in your own session and uses its model.
 
 ## Note schema
 
@@ -60,6 +74,7 @@ The schema keeps Spanish keys on purpose; it is the convention all commands rely
   Recursos/        how-tos, gotchas, Bitácora.md
   Tareas/          T-NNN titulo.md + Tablero.md (derived view)
   _plantillas/     Decision.md, Tarea.md
+  Modelos.md       which models /tareas subagents use (perfil)
 ```
 
 Task notes use `estado` (`pendiente`, `preparando`, `en-curso`, `esperando`, `lista`, `hecha`), `depende_de`, `camino` (`directo`, `plan`, `diseño`, `prototipo`), `tamaño`, `repos`.

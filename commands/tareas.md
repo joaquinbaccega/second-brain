@@ -1,6 +1,6 @@
 ---
 description: Shared task board in the project's second brain. Plan and prepare tasks with dependencies and a ready-to-use brief, dispatch subagents for the free tasks, take one task in this session, show the board, or merge finished ones
-argument-hint: "[ | N | tomar [T-NNN] | agregar <descripción> | preparar [T-NNN] | estado | mergear]"
+argument-hint: "[ | N | tomar [T-NNN] | agregar <descripción> | preparar [T-NNN] | estado | mergear | modelos [perfil]]"
 ---
 Shared task board so several Claude sessions can work in parallel without stepping on each other and without re-reading the code. Reply to the user in their language. Note frontmatter keys, states and section headings use the Spanish schema below; write note prose in the language the vault already uses.
 
@@ -27,6 +27,17 @@ Reading the code twice is waste. Avoid it.
 - **Locks.** They live outside the synced repo: `~/.claude/state/tareas/<vault>/`. `mkdir` is the atomic claim. Locks are per machine, so never dispatch tasks for the same vault on two machines at once.
   - `$L` below means that folder. Shell variables don't survive between Bash calls, so start every call that uses it with `L="$HOME/.claude/state/tareas/<vault>"; mkdir -p "$L"`.
   - To release a lock, use guarded expansions: `rm -f "${L:?}/${ID:?}.lock/owner"; rmdir "${L:?}/${ID:?}.lock"`. The safety check refuses an unguarded `rm "$L/…"`.
+
+## Models — which model each subagent uses
+
+Every subagent launch (Explore, implementer, reviewer) passes an explicit `model` (`sonnet`, `opus` or `fable`), chosen by `<vault>/Modelos.md`:
+
+- Read its `perfil` once per run. If the file is missing, create it from `${CLAUDE_PLUGIN_ROOT}/templates/Modelos.md` (`perfil: equilibrado`) and tell the owner in one line that `/tareas modelos` changes it.
+- Apply the perfil's row of the table in that note. A task is **sensitive** per the note's definition; judge it from the Base, its «Cuidado», the files it touches, and whether money or permissions are involved. A reviewer of a task uses the tier that task's row says for reviews.
+- `propio`: follow «Reglas propias» in the note. If they don't cover a case, use `equilibrado` for that case.
+- **Say it.** When dispatching, add the model to each task's line for the owner (e.g. `T-012 → opus (permissions)`).
+- **Escalation**, only in `ahorro`, `equilibrado`, `calidad` and `propio`: if a subagent gets stuck or returns weak work on a task that turned out more delicate than it looked, relaunch it one tier up (Sonnet → Opus → Fable, never above what the perfil allows) and log it in the note's `## Registro`. With `sonnet`, `opus` or `fable`, never change the model; report the trouble to the owner instead.
+- `tomar` runs in the owner's own session, so its model is the session's. If the perfil calls for a higher tier than the session's for that task, say so in one line before starting.
 
 ## Task note format
 
@@ -84,7 +95,7 @@ The planner splits large work into tasks: spec, then plan, then parallel impleme
 
 1. **Understand the request.** Read the vault's hub, the relevant decisions and gotcha notes in `Recursos/`. Ask the owner only when scope or a dependency is genuinely unclear, one question at a time.
 2. **Read the code once.**
-   - For anything beyond a trivial lookup, delegate exploration to one Explore subagent. Give it a precise question per task: files, functions, line numbers, existing patterns, tests.
+   - For anything beyond a trivial lookup, delegate exploration to one Explore subagent, with the model from «Models». Give it a precise question per task: files, functions, line numbers, existing patterns, tests.
    - Keep its conclusions, not file dumps.
 3. **Decide the tasks.** Choose the split, each task's `camino`, `tamaño`, `depende_de` and, with groups, its `grupo`. Pick dependencies on finished deliverables: a spec task, a migration, a shared helper.
 4. **Pick ids.** Find the highest existing id, then claim `mkdir "$L/ids/T-NNN"`. If that fails, increment and retry.
@@ -95,13 +106,13 @@ The planner splits large work into tasks: spec, then plan, then parallel impleme
    - which ones can run in parallel right away;
    - what needs them.
 
-**Owner-only work** (a Meta template, a payment, credentials, a deploy) is not a Claude task. Put it in the hub's `## Pendientes`.
+**Owner-only work** (a third-party approval, a payment, credentials, a deploy) is not a Claude task. Put it in the hub's `## Pendientes`.
 
 ## Mode: `preparar [T-NNN]` — write the Base for tasks that lack it
 
 1. **Pick the targets.** Without an id, take every `pendiente` task with `preparada` missing or `false`.
 2. **Lock each target.** Claim `mkdir "$L/T-NNN.lock"`. If that fails, skip the task. Then set `estado: preparando`.
-3. **Explore.** Delegate the code reading, one Explore subagent per task, in parallel.
+3. **Explore.** Delegate the code reading, one Explore subagent per task, in parallel, each with the model from «Models».
 4. **Write the result.** For each task:
    - write the Base;
    - set `camino`, `tamaño` and `depende_de`;
@@ -146,15 +157,15 @@ The planner splits large work into tasks: spec, then plan, then parallel impleme
    - create its worktrees as in `tomar` step 6. Do it here and sequentially, because concurrent `git worktree add` on the same repo can collide.
 
    Then rebuild the board once.
-6. **Dispatch.** Launch one `general-purpose` subagent per task, in the background, all in one message, with the prompt in «Subagent prompt». Then tell the owner, in a few lines:
-   - what is running;
+6. **Dispatch.** Launch one `general-purpose` subagent per task, in the background, all in one message, with the prompt in «Subagent prompt» and the model from «Models». Then tell the owner, in a few lines:
+   - what is running, with each task's model;
    - what is queued;
    - what is for the owner's session (`diseño`, `prototipo`, needs the owner);
    - what is stale or `L`.
 
    Offer in one line to take the first owner task here with `tomar` while the subagents work.
 7. **When a subagent reports back,** act on its first word. A notice that an agent is waiting on its own background work is not a report, and the same report can arrive twice: act once.
-   - **`LISTA`:** dispatch one fresh reviewer subagent for the whole task, following superpowers:requesting-code-review. Give it the diff of each worktree against `main`, the note's «Objetivo», «Base» and «Terminada cuando», and the spec the Base cites. Ask it to check permissions and money against the spec, not the Base, and to say which findings should block publishing.
+   - **`LISTA`:** dispatch one fresh reviewer subagent for the whole task, with the review model from «Models», following superpowers:requesting-code-review. Give it the diff of each worktree against `main`, the note's «Objetivo», «Base» and «Terminada cuando», and the spec the Base cites. Ask it to check permissions and money against the spec, not the Base, and to say which findings should block publishing.
      - If the reviewer finds real problems, send them to the same implementer with SendMessage and wait for a new report. Decide each finding yourself: fix it, accept it with a line in the note, or open a follow-up task with `agregar`. Ask the owner only about product decisions.
      - Treat an automated security review of a task's commits as a reviewer finding: verify it, then send it to the implementer.
      - When the fixes touch permissions, money, saving or a public route, send only the fix commits to the same reviewer, and repeat until no important finding is left. Other fixes need no new review.
@@ -311,6 +322,13 @@ Run this only when the owner asks.
 4. **Finish.** Remove the merge lock and rebuild the board. Report what merged, what didn't and why, and which tasks are now unblocked.
 
 Never push or deploy unless the owner asks.
+
+## Mode: `modelos [perfil]` — choose which models the subagents use
+
+1. Read `<vault>/Modelos.md`, creating it from the template if missing.
+2. With a valid perfil (`sonnet`, `opus`, `fable`, `ahorro`, `equilibrado`, `calidad`, `propio`), set `perfil` in its frontmatter. Without one, show the perfiles table and the current perfil, then ask which one to use and wait.
+3. For `propio`, ask the owner for the rules in their own words and write them under «Reglas propias».
+4. Confirm in one line. The change applies from the next dispatch; running subagents keep their model.
 
 ## Board format (`Tablero.md`)
 
