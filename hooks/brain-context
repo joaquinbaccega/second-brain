@@ -9,7 +9,7 @@ dir="${dir//\\//}/"  # Windows passes C:\... or C:/...; normalize to forward sla
 
 best=-1
 V=""
-while IFS='|' read -r project path; do
+while IFS='|' read -r project path || [ -n "$project" ]; do  # also read a last line without a newline
   project="${project%$'\r'}"
   path="${path%$'\r'}"  # tolerate a conf saved with CRLF
   [[ -z "$project" || "$project" == \#* || -z "$path" ]] && continue

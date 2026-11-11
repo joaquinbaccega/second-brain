@@ -16,6 +16,7 @@ Nothing in this plugin installs software on your machine.
 ## Requirements
 
 - `bash` (on Windows: Git Bash, from Git for Windows).
+- `ripgrep` (`rg`), used by `/brain-save` and `/tareas` to search the vault.
 - The `superpowers` plugin, needed by `/tareas` (writing-plans, executing-plans, brainstorming, subagent-driven-development).
 - Obsidian (optional, to browse and edit the vault; the vault is plain Markdown).
 
@@ -78,7 +79,7 @@ Checklist for a Claude Code session to set this up end to end. Steps marked **[H
    - Windows: `winget install Obsidian.Obsidian`
    - Linux: `flatpak install flathub md.obsidian.Obsidian`, or download the AppImage from https://obsidian.md/download
    Skip if the person already has it or does not want it.
-3. **Ensure bash.** macOS and Linux already have it. On Windows check `bash --version`; if missing, with the person's approval run `winget install Git.Git` (provides Git Bash), then **[HUMAN]** restart the terminal.
+3. **Ensure bash.** macOS and Linux already have it. On Windows check `bash --version`; if missing, with the person's approval run `winget install Git.Git` (provides Git Bash), then **[HUMAN]** restart the terminal. Also check `rg --version`; if missing, with the person's approval install ripgrep (macOS: `brew install ripgrep`; Windows: `winget install BurntSushi.ripgrep.MSVC`; Linux: the distro package `ripgrep`).
 4. **Add the marketplace and install** (inside Claude Code):
    ```
    /plugin marketplace add joaquinbaccega/second-brain

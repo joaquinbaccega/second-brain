@@ -25,6 +25,7 @@ Reading the code twice is waste. Avoid it.
 - **Template.** `<vault>/_plantillas/Tarea.md`.
 - **Plans and specs** that a task produces go where the project keeps them. Check the project's CLAUDE.md for where it keeps specs and plans; default to `docs/specs/` and `docs/plans/`. A taker writes them inside its worktree and commits them on the task branch, so the main checkout stays clean. Link them from the task.
 - **Locks.** They live outside the synced repo: `~/.claude/state/tareas/<vault>/`. `mkdir` is the atomic claim. Locks are per machine, so never dispatch tasks for the same vault on two machines at once.
+  - `$L` below means that folder. Shell variables don't survive between Bash calls, so start every call that uses it with `L="$HOME/.claude/state/tareas/<vault>"; mkdir -p "$L"`.
   - To release a lock, use guarded expansions: `rm -f "${L:?}/${ID:?}.lock/owner"; rmdir "${L:?}/${ID:?}.lock"`. The safety check refuses an unguarded `rm "$L/…"`.
 
 ## Task note format
