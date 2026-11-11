@@ -1,0 +1,12 @@
+{
+  "name": "second-brain",
+  "version": "0.1.0",
+  "description": "A per-project second brain for Claude Code: Obsidian vaults injected at session start, decision capture and a shared task board.",
+  "author": { "name": "Joaquín Baccega" },
+  "repository": "https://github.com/joaquinbaccega/second-brain",
+  "license": "MIT",
+  "keywords": ["obsidian", "memory", "second-brain", "tasks"],
+  "dependencies": [
+    { "name": "superpowers", "marketplace": "claude-plugins-official" }
+  ]
+}

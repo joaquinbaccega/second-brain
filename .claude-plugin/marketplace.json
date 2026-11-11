@@ -1,0 +1,12 @@
+{
+  "name": "second-brain",
+  "owner": { "name": "Joaquín Baccega" },
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
+  "plugins": [
+    {
+      "name": "second-brain",
+      "source": "./",
+      "description": "A per-project second brain for Claude Code: Obsidian vaults injected at session start, decision capture and a shared task board."
+    }
+  ]
+}

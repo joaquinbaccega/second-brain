@@ -1,0 +1,59 @@
+#!/bin/bash
+# SessionStart hook: inject the current project's second brain (Obsidian vault hub) as context.
+# Mapping lives in ${BRAINS_CONF:-$HOME/.claude/brains.conf}, lines "<project folder name>|<vault path>".
+# Silent no-op when there is no conf, no matching project, or no Inicio.md.
+CONF="${BRAINS_CONF:-$HOME/.claude/brains.conf}"
+dir="${CLAUDE_PROJECT_DIR:-$PWD}"
+dir="${dir//\\//}/"  # Windows passes C:\... or C:/...; normalize to forward slashes
+[ -f "$CONF" ] || exit 0
+
+best=-1
+V=""
+while IFS='|' read -r project path; do
+  project="${project%$'\r'}"
+  path="${path%$'\r'}"  # tolerate a conf saved with CRLF
+  [[ -z "$project" || "$project" == \#* || -z "$path" ]] && continue
+  before="${dir%/"$project"/*}"  # path before the deepest segment equal to the project name
+  if [[ "$before" != "$dir" ]] && (( ${#before} > best )); then
+    best=${#before}
+    V="$path"
+  fi
+done < "$CONF"
+[ -n "$V" ] || exit 0
+
+[[ "$V" == "~" || "$V" == "~/"* ]] && V="$HOME${V#\~}"
+V="${V//\\//}"        # Windows-style vault path
+V="${V%/}"
+[ -f "$V/Inicio.md" ] || exit 0
+vault="${V##*/}"
+
+echo "## Second brain: $vault"
+echo "Obsidian vault: $V"
+echo "Its hub note is below. Read notes it links (Decisiones/, Recursos/) when relevant to the task. Offer /brain-save when durable knowledge comes up."
+echo
+LIMIT=8000
+head -c "$LIMIT" "$V/Inicio.md"
+size=$(( $(wc -c < "$V/Inicio.md") ))
+if (( size > LIMIT )); then
+  echo
+  echo "WARNING: the hub is $size bytes and was cut at $LIMIT. Read the rest of Inicio.md, and trim the hub per /brain-save (move history to Recursos/Bitácora.md)."
+fi
+
+# Next work from a grouped board (/tareas with Tareas/Grupos.md): tasks not blocked, by group priority.
+B="$V/Tareas/Tablero.md"
+if [ -f "$B" ]; then
+  next=$(awk -F'|' '
+    /^## [0-9]+\. / { group = substr($0, 4); next }
+    /^## / { group = "" }
+    group != "" && /^\| \[\[T-/ {
+      name = $2; gsub(/\[\[|\]\]|^ +| +$/, "", name)
+      state = $3; gsub(/ /, "", state)
+      if (state != "bloqueada") printf "- [%s] %s (%s)\n", group, name, state
+    }' "$B" | head -8)
+  if [ -n "$next" ]; then
+    echo
+    echo "## Next on the task board (by group priority; /tareas to dispatch or take one)"
+    echo "$next"
+  fi
+fi
+exit 0
